@@ -20,6 +20,7 @@ CARGOS = [
     'analista de telecomunicações',
     'analista de suporte técnico',
     'analista de help desk',
+    'analista de desenvolvimento de sistemas',
 
     # Engenheiros
     'engenheiro da computação',
@@ -28,7 +29,9 @@ CARGOS = [
     'engenheiro de sistemas',
     'engenheiro de machine learning',
     'engenheiro de redes',
-    'engenheiro de segurança',
+    'engenheiro de segurança de software',
+    'engenheiro de segurança da informação',
+    'engenheiro de sistemas',
     'engenheiro de telecomunicações',
     'engenheiro de automação',
     'engenheiro de ia',
@@ -81,6 +84,7 @@ CARGOS = [
 
     # Técnicos
     'técnico em informática',
+    'técnico de informática',
     'técnico em tecnologia da informação',
     'técnico em suporte',
     'técnico de redes',
@@ -88,13 +92,11 @@ CARGOS = [
     'técnico em telecomunicações',
     'técnico de segurança da informação',
     'técnico em desenvolvimento',
-
-    # Consultores
-    'consultor em ti',
-    'consultor de sistemas',
-    'consultor em tecnologia',
-    'consultor sap',
-    'consultor de negócios',
+    'técnico de laboratório de informática',
+    'técnico em hardware',
+    'técnico de hardware',
+    'técnico de software',
+    'técnico em software',
 
     # Auditores
     'auditor de sistemas',
@@ -115,30 +117,25 @@ CARGOS = [
     'especialista em cybersegurança',
     'especialista em segurança cibernética',
 
-    # Cargos Web e UX/UI
-    'webdesigner',
-    'designer de interface',
-    'analista de ux',
-    'designer ux/ui',
-    'analista de usabilidade',
-
-    # Cargos de Pesquisa e Inovação
-    'pesquisador em computação',
-    'analista de inovação tecnológica',
-    'especialista em pesquisa e desenvolvimento',
-
-    # Cargos Específicos do Setor Público
+    # Cargos tecnólogos
     'tecnólogo em análise e desenvolvimento de sistemas',
     'tecnólogo em redes de computadores',
     'tecnólogo em segurança da informação',
     'tecnólogo em sistemas para internet',
     'tecnólogo em banco de dados',
     'tecnólogo em gestão da tecnologia da informação',
+    'tecnólogo da informação',
 
     # Cargos Generalistas
     'profissional de ti',
     'profissional de tecnologia',
     'assistente em ciência e tecnologia',
+    'assistente de tecnologia da informação',
+    'gestão de tecnologia da informação',
+    'assistente de suporte de informática',
+    'monitor de informática',
+    'supervisor de informática',
+    'instrutor de informática',
 
     # Cargos em áreas específicas
     'analista em geoprocessamento',
@@ -147,10 +144,11 @@ CARGOS = [
     'programador de computador',
     'operador de computador',
     'digitalizador',
+    'análise e desenvolvimento de sistemas',
 
     # Outras variações
     'bacharel em sistemas de informação',
     'bacharel em ciência da computação',
     'bacharel em engenharia da computação',
-    'bacharel em engenharia de software',
+    'bacharel em engenharia de software'
 ]

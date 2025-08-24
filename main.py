@@ -3,63 +3,88 @@ import re
 import json
 import asyncio
 import aiohttp
-import discord
-from discord.ext import commands, tasks
 from bs4 import BeautifulSoup
 from io import BytesIO
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from datetime import datetime
+import schedule
+import time
+import unicodedata
+from base import CARGOS
 
-# Carrega variáveis de ambiente
-load_dotenv()
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID', '0'))
-
-# URLs base
 BASE_URL = 'https://www.pciconcursos.com.br'
 HOME_URL = f'{BASE_URL}/concursos/'
-
-# Arquivos locais
 PROCESSED_FILE = 'processed.json'
-DATA_FILE = r'C:\Users\luisg\Documents\GitHub\Vagas_TI\data.json'
-
-# Palavras-chave TI
-CARGOS = [
-    'analista de banco de dados', 'analista desenvolvedor', 'analista de desenvolvimento',
-    'analista de tecnologia da informação', 'técnico de tecnologia da informação',
-    'analista de suporte', 'analista de redes', 'analista de sistemas',
-    'analista de informática', 'analista em sistemas de informação',
-    'desenvolvedor de software', 'programador', 'técnico de informática',
-    'tecnologista da informação', 'operador de sistemas', 'analista de ti',
-    'técnico bancário iii', 'técnico bancário novo tecnologia da informação – tbn/ti',
-    'agente de tecnologia', 'gerência de ti'
-]
-
-MATERIAS = [
-    'arquitetura cliente-servidor', 'arquitetura de software', 'arquitetura mvc',
-    'ci/cd', 'cmmi', 'clean code', 'cobit', 'codificação limpa', 'data lake',
-    'data mining', 'data warehouse', 'design patterns', 'devops', 'engenharia de requisitos',
-    'engenharia de software', 'entidade-relacionamento', 'extreme programming', 'html/css',
-    'html5', 'hibernate', 'infraestrutura de ti', 'inteligência artificial', 'itil', 'jakartaee', 'java',
-    'javaee', 'javascript', 'junit', 'low-code', 'machine learning', 'mps-br',
-    'microsserviços', 'mysql', 'no-code', 'nosql', 'owasp', 'oracle',
-    'pl/sql', 'pmbok', 'postgresql', 'qualidade de software', 'react', 'ruby',
-    'scrum', 'sgd/me nº 94', 'soap', 'sql', 'sql server', 'springboot', 'story points',
-    'stored procedure', 'swagger', 'tcp', 'tcp/ip', 'tdd', 'testes de software', 'trigger',
-    'typescript', 'vue.js', 'web services', 'webapi', 'aprendizado de máquina',
-    'governança de ti', 'node.js', 'docker', 'kubernetes', 'orientação a objetos', 'middleware', 'apis rest',
-    'api rest', 'rest/graphql', 'sonarqube', 'single sign-on', 'oauth', 'containers'
-]
-
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+DATA_FILE = 'data.json'
 
 processed = set()
 data_list = []
 
-# Funções de persistência JSON
+def normalizar_texto(texto):
+    if not texto:
+        return ""
+
+    texto = unicodedata.normalize('NFD', texto)
+    texto = ''.join(char for char in texto if unicodedata.category(char) != 'Mn')
+    
+    texto = texto.lower()
+    
+    texto = re.sub(r'[^\w\s]', ' ', texto, flags=re.UNICODE)
+    texto = re.sub(r'\s+', ' ', texto)
+    
+    substituicoes = {
+        'tecnologia da informacao': 'ti',
+        'tecnologia de informacao': 'ti',
+        'informatica': 'ti',
+        'analise': 'analise',
+        'computacao': 'computacao',
+        'tecnico': 'tecnico',
+        'especializacao': 'especializacao',
+        'administracao': 'administracao',
+        'desenvolvimento': 'desenvolvimento',
+        'programacao': 'programacao',
+        'telecomunicacoes': 'telecomunicacoes',
+        'banco de dados': 'bd',
+        'base de dados': 'bd',
+        'business intelligence': 'bi',
+        'inteligencia de negocios': 'bi',
+        'machine learning': 'ml',
+        'aprendizado de maquina': 'ml',
+        'devops': 'devops',
+        'dev ops': 'devops',
+        'help desk': 'helpdesk',
+        'seguranca da informacao': 'seguranca ti',
+        'seguranca cibernetica': 'seguranca ti',
+        'cyberseguranca': 'seguranca ti',
+        'ux ui': 'uxui',
+        'user experience': 'ux',
+        'user interface': 'ui'
+    }
+    
+    for original, substituto in substituicoes.items():
+        texto = texto.replace(original, substituto)
+    
+    return texto.strip()
+
+def buscar_cargos_ti_melhorado(texto_edital):
+    """
+    Busca cargos de TI no texto do edital com matching mais flexível
+    """
+    texto_normalizado = normalizar_texto(texto_edital)
+    cargos_encontrados = []
+    
+    if not hasattr(buscar_cargos_ti_melhorado, 'cargos_normalizados'):
+        buscar_cargos_ti_melhorado.cargos_normalizados = {
+            cargo: normalizar_texto(cargo) for cargo in CARGOS
+        }
+    
+    for cargo_original, cargo_normalizado in buscar_cargos_ti_melhorado.cargos_normalizados.items():
+        if cargo_normalizado in texto_normalizado:
+            cargos_encontrados.append(cargo_original)
+    
+    return list(dict.fromkeys(cargos_encontrados))
+
 def load_json_set(path):
     if os.path.exists(path):
         try:
@@ -164,107 +189,107 @@ async def extract_pdf_urls(session, contest_url: str) -> list[str]:
             unique.append(u)
     return unique
 
-def normalize(text: str) -> str:
-    text = re.sub(r'[^\w\s]', ' ', text, flags=re.UNICODE)
-    text = re.sub(r'\s+', ' ', text)
-    return text.lower()
-
 async def search_pdf(session, pdf_url: str) -> dict | None:
-    data = await fetch(session, pdf_url)
     try:
+        data = await fetch(session, pdf_url)
         reader = PdfReader(BytesIO(data))
         raw_text = ''.join(page.extract_text() or '' for page in reader.pages)
-        text = normalize(raw_text)
-        found_cargos = [kw for kw in CARGOS if normalize(kw) in text]
-        found_materias = [kw for kw in MATERIAS if normalize(kw) in text]
+        
+        # Usa a nova função de busca melhorada
+        found_cargos = buscar_cargos_ti_melhorado(raw_text)
+        
         print(f"[DEBUG] PDF {pdf_url} -> cargos encontrados: {found_cargos}")
-        print(f"[DEBUG] PDF {pdf_url} -> matérias encontradas: {found_materias}")
-        found_cargos = list(dict.fromkeys(found_cargos))
-        found_materias = list(dict.fromkeys(found_materias))
-        if len(found_materias) >= 3 or found_cargos:
-            return {"materias": found_materias, "cargos": found_cargos}
+        
+        if found_cargos:
+            return {"cargos": found_cargos}
     except Exception as e:
         print(f"[search_pdf] Erro ao ler PDF {pdf_url}: {e}")
     return None
 
-@tasks.loop(minutes=60)
-async def check_and_notify():
-    await bot.wait_until_ready()
-    channel = bot.get_channel(CHANNEL_ID)
-    if not channel:
-        return
+async def check_and_process():
+    """Função principal de processamento"""
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iniciando verificação de concursos...")
+    
     async with aiohttp.ClientSession() as session:
-        contests = await parse_homepage(session)
-        for c in contests:
-            url = c['url']
-            if url in processed:
-                continue
-            processed.add(url)
-            persist_state()
-            pdf_urls = await extract_pdf_urls(session, url)
-            chosen_pdf = None
-            edital_data = None
-            for pdf_url in pdf_urls:
-                result = await search_pdf(session, pdf_url)
-                if result:
-                    chosen_pdf = pdf_url
-                    edital_data = result
-                    break
-            job_title = None
-            materias_list = None
-            if edital_data:
-                if edital_data.get('cargos'):
-                    job_title = edital_data['cargos'][0]
-                elif len(edital_data.get('materias', [])) >= 3:
-                    job_title = "Cargo não encontrado"
-                materias_list = edital_data['materias']
-            if not job_title:
-                print(f"[DEBUG] Ignorado: sem dados relevantes no edital de {c['title']}")
-                continue
-            start_date, end_date = parse_date_range(c['date'])
-            if is_expired(start_date, end_date):
-                continue
-            entry = {
-                'title': c['title'], 'url': url, 'state': c['state'], 'job': job_title
-            }
-            if start_date:
-                entry['start_date'] = start_date
-            if end_date:
-                entry['end_date'] = end_date
-            if materias_list:
-                entry['materias'] = materias_list
-            if chosen_pdf:
-                entry['pdf_url'] = chosen_pdf
-            data_list.append(entry)
-            persist_state()
-            mat_str = ', '.join(materias_list) if materias_list else "N/D"
-            msg = f"## {c['title']}\n"
-            msg += f"----------------------------------------\n"
-            msg += f"**📜 Estado:** {c['state']}\n"
-            msg += f"----------------------------------------\n"
-            if start_date and end_date:
-                msg += f"**🗓️ Inscrições:** de {start_date} até {end_date}\n"
-            elif start_date:
-                msg += f"**🗓️ Inscrições até:** {start_date}\n"
-            else:
-                msg += f"**🗓️ Inscrições:** Data indefinida\n"
-            msg += f"----------------------------------------\n"
-            msg += f"**💼 Cargo:** {job_title}\n"
-            msg += f"----------------------------------------\n"
-            if materias_list:
-                msg += f"**📚 Matérias:** {mat_str}\n"
-                msg += f"----------------------------------------\n"
-            if chosen_pdf:
-                msg += f"**📒 Edital:** {chosen_pdf}\n"
-                msg += f"----------------------------------------\n"
-            msg += f"**💻 Link do concurso:** {url}\n"
-            msg += f"----------------------------------------\n"
-            await channel.send(msg)
+        try:
+            contests = await parse_homepage(session)
+            print(f"Encontrados {len(contests)} concursos na página inicial")
+            
+            new_contests = 0
+            for i, c in enumerate(contests, 1):
+                url = c['url']
+                print(f"Processando {i}/{len(contests)}: {c['title']}")
+                
+                if url in processed:
+                    print(f"  -> Já processado anteriormente")
+                    continue
+                
+                processed.add(url)
+                persist_state()
+                
+                try:
+                    pdf_urls = await extract_pdf_urls(session, url)
+                    print(f"  -> Encontrados {len(pdf_urls)} PDFs")
+                    
+                    chosen_pdf = None
+                    edital_data = None
+                    
+                    for pdf_url in pdf_urls:
+                        result = await search_pdf(session, pdf_url)
+                        if result:
+                            chosen_pdf = pdf_url
+                            edital_data = result
+                            break
+                    
+                    job_title = None
+                    all_jobs = []
+                    
+                    if edital_data and edital_data.get('cargos'):
+                        all_jobs = edital_data['cargos']
+                        job_title = all_jobs[0]
+                    
+                    if not job_title:
+                        print(f"  -> Ignorado: sem dados relevantes de TI")
+                        continue
+                    
+                    start_date, end_date = parse_date_range(c['date'])
+                    if is_expired(start_date, end_date):
+                        print(f"  -> Ignorado: concurso expirado")
+                        continue
+                    
+                    entry = {
+                        'title': c['title'], 
+                        'url': url, 
+                        'state': c['state'], 
+                        'job': job_title,
+                        'all_jobs': all_jobs,
+                        'processed_at': datetime.now().isoformat()
+                    }
+                    
+                    if start_date:
+                        entry['start_date'] = start_date
+                    if end_date:
+                        entry['end_date'] = end_date
+                    if chosen_pdf:
+                        entry['pdf_url'] = chosen_pdf
+                    
+                    data_list.append(entry)
+                    persist_state()
+                    new_contests += 1
+                    
+                    print(f"  -> ✅ ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
+                    
+                except Exception as e:
+                    print(f"  -> Erro ao processar concurso: {e}")
+                    continue
+            print(f"Processamento finalizado! {new_contests} novos concursos adicionados.")
+            
+        except Exception as e:
+            print(f"Erro durante o processamento: {e}")
 
-@bot.event
-async def on_ready():
-    init_state()
-    check_and_notify.start()
+def run_once():
+    asyncio.run(check_and_process())
 
 if __name__ == '__main__':
-    bot.run(TOKEN)
+    init_state()
+    run_once()

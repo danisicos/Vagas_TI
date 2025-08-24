@@ -1,0 +1,16 @@
+aiohttp==3.9.3
+aiosignal==1.4.0
+async-timeout==4.0.3
+attrs==25.3.0
+beautifulsoup4==4.12.2
+discord.py==2.3.2
+frozenlist==1.7.0
+idna==3.10
+multidict==6.6.4
+mysql-connector==2.2.9
+propcache==0.3.2
+PyPDF2==3.0.1
+python-dotenv==1.0.0
+schedule==1.2.2
+soupsieve==2.5
+yarl==1.20.1

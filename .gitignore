@@ -1,3 +1,4 @@
 .env
 processed.json
 data.json
+__pycache__/

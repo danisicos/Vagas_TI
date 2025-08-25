@@ -67,8 +67,8 @@ def insert_data(conn, data):
     cursor = conn.cursor()
 
     sql = """
-    INSERT INTO concursos (title, url, state, job, processed_at, start_date, pdf_url)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO concursos (title, url, state, job, processed_at, start_date, pdf_url, status)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
         title = VALUES(title),
         state = VALUES(state),
@@ -99,7 +99,8 @@ def insert_data(conn, data):
                 item.get("job"),
                 processed_at,
                 start_date,
-                item["pdf_url"]
+                item["pdf_url"],
+                'Aberto'
             ))
             
             if cursor.rowcount == 1:

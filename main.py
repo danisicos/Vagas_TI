@@ -21,6 +21,7 @@ DATA_FILE = 'data.json'
 processed = set()
 data_list = []
 
+# Função para normalizar texto
 def normalizar_texto(texto):
     if not texto:
         return ""
@@ -33,6 +34,7 @@ def normalizar_texto(texto):
     texto = re.sub(r'[^\w\s]', ' ', texto, flags=re.UNICODE)
     texto = re.sub(r'\s+', ' ', texto)
     
+    # Substituições comuns para melhorar o matching
     substituicoes = {
         'tecnologia da informacao': 'ti',
         'tecnologia de informacao': 'ti',
@@ -53,8 +55,6 @@ def normalizar_texto(texto):
         'help desk': 'helpdesk',
         'segurança  da informação': 'seguranca da informacao',
         'seguranca da informacao': 'seguranca ti',
-        'seguranca cibernetica': 'seguranca ti',
-        'cyberseguranca': 'seguranca ti'
     }
     
     for original, substituto in substituicoes.items():
@@ -62,19 +62,17 @@ def normalizar_texto(texto):
     
     return texto.strip()
 
-def buscar_cargos_ti_melhorado(texto_edital):
-    """
-    Busca cargos de TI no texto do edital com matching mais flexível
-    """
+def buscar_cargos(texto_edital):
+
     texto_normalizado = normalizar_texto(texto_edital)
     cargos_encontrados = []
     
-    if not hasattr(buscar_cargos_ti_melhorado, 'cargos_normalizados'):
-        buscar_cargos_ti_melhorado.cargos_normalizados = {
+    if not hasattr(buscar_cargos, 'cargos_normalizados'):
+        buscar_cargos.cargos_normalizados = {
             cargo: normalizar_texto(cargo) for cargo in CARGOS
         }
     
-    for cargo_original, cargo_normalizado in buscar_cargos_ti_melhorado.cargos_normalizados.items():
+    for cargo_original, cargo_normalizado in buscar_cargos.cargos_normalizados.items():
         if cargo_normalizado in texto_normalizado:
             cargos_encontrados.append(cargo_original)
     
@@ -85,7 +83,7 @@ def load_json_set(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 return set(json.load(f))
-        except:
+        except Exception:
             return set()
     return set()
 
@@ -98,7 +96,7 @@ def load_json_list(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception:
             return []
     return []
 
@@ -136,7 +134,7 @@ def is_expired(start: str, end: str):
             return str_to_date(end) < today
         elif start:
             return str_to_date(start) < today
-    except:
+    except Exception:
         pass
     return False
 
@@ -190,8 +188,7 @@ async def search_pdf(session, pdf_url: str) -> dict | None:
         reader = PdfReader(BytesIO(data))
         raw_text = ''.join(page.extract_text() or '' for page in reader.pages)
         
-        # Usa a nova função de busca melhorada
-        found_cargos = buscar_cargos_ti_melhorado(raw_text)
+        found_cargos = buscar_cargos(raw_text)
         
         print(f"[DEBUG] PDF {pdf_url} -> cargos encontrados: {found_cargos}")
         
@@ -202,7 +199,7 @@ async def search_pdf(session, pdf_url: str) -> dict | None:
     return None
 
 async def check_and_process():
-    """Função principal de processamento"""
+
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iniciando verificação de concursos...")
     
     async with aiohttp.ClientSession() as session:
@@ -216,7 +213,7 @@ async def check_and_process():
                 print(f"Processando {i}/{len(contests)}: {c['title']}")
                 
                 if url in processed:
-                    print(f"  -> Já processado anteriormente")
+                    print("  -> Já processado anteriormente")
                     continue
                 
                 processed.add(url)
@@ -244,12 +241,12 @@ async def check_and_process():
                         job_title = all_jobs[0]
                     
                     if not job_title:
-                        print(f"  -> Ignorado: sem dados relevantes de TI")
+                        print("  -> Ignorado: sem dados relevantes de TI")
                         continue
                     
                     start_date, end_date = parse_date_range(c['date'])
                     if is_expired(start_date, end_date):
-                        print(f"  -> Ignorado: concurso expirado")
+                        print("  -> Ignorado: concurso expirado")
                         continue
                     
                     entry = {
@@ -272,7 +269,7 @@ async def check_and_process():
                     persist_state()
                     new_contests += 1
                     
-                    print(f"  -> ✅ ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
+                    print(f"  -> ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
                     
                 except Exception as e:
                     print(f"  -> Erro ao processar concurso: {e}")

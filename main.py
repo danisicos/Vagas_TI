@@ -1,16 +1,9 @@
-import os
-import re
-import json
-import asyncio
-import aiohttp
+import os, re, json, asyncio, aiohttp, unicodedata
 from bs4 import BeautifulSoup
 from io import BytesIO
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from datetime import datetime
-import schedule
-import time
-import unicodedata
 from base import CARGOS
 
 BASE_URL = 'https://www.pciconcursos.com.br'
@@ -198,84 +191,92 @@ async def search_pdf(session, pdf_url: str) -> dict | None:
         print(f"[search_pdf] Erro ao ler PDF {pdf_url}: {e}")
     return None
 
-async def check_and_process():
+async def process_contest(session, c, i, total):
+    url = c['url']
+    print(f"Processando {i}/{total}: {c['title']}")
 
+    if url in processed:
+        print("  -> Já processado anteriormente")
+        return False
+
+    processed.add(url)
+    persist_state()
+
+    try:
+        pdf_urls = await extract_pdf_urls(session, url)
+        print(f"  -> Encontrados {len(pdf_urls)} PDFs")
+
+        chosen_pdf, edital_data = await find_first_relevant_pdf(session, pdf_urls)
+
+        job_title, all_jobs = extract_job_info(edital_data)
+
+        if not job_title:
+            print("  -> Ignorado: sem dados relevantes de TI")
+            return False
+
+        start_date, end_date = parse_date_range(c['date'])
+        if is_expired(start_date, end_date):
+            print("  -> Ignorado: concurso expirado")
+            return False
+
+        entry = build_entry(c, job_title, all_jobs, start_date, end_date, chosen_pdf)
+        data_list.append(entry)
+        persist_state()
+
+        print(f"  -> ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
+        return True
+
+    except Exception as e:
+        print(f"  -> Erro ao processar concurso: {e}")
+        return False
+
+async def find_first_relevant_pdf(session, pdf_urls):
+    for pdf_url in pdf_urls:
+        result = await search_pdf(session, pdf_url)
+        if result:
+            return pdf_url, result
+    return None, None
+
+def extract_job_info(edital_data):
+    if edital_data and edital_data.get('cargos'):
+        all_jobs = edital_data['cargos']
+        job_title = all_jobs[0]
+        return job_title, all_jobs
+    return None, []
+
+def build_entry(c, job_title, all_jobs, start_date, end_date, chosen_pdf):
+    entry = {
+        'title': c['title'],
+        'url': c['url'],
+        'state': c['state'],
+        'job': job_title,
+        'all_jobs': all_jobs,
+        'processed_at': datetime.now().isoformat()
+    }
+    if start_date:
+        entry['start_date'] = start_date
+    if end_date:
+        entry['end_date'] = end_date
+    if chosen_pdf:
+        entry['pdf_url'] = chosen_pdf
+    return entry
+
+async def check_and_process():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iniciando verificação de concursos...")
-    
+
     async with aiohttp.ClientSession() as session:
         try:
             contests = await parse_homepage(session)
             print(f"Encontrados {len(contests)} concursos na página inicial")
-            
+
             new_contests = 0
+            total = len(contests)
             for i, c in enumerate(contests, 1):
-                url = c['url']
-                print(f"Processando {i}/{len(contests)}: {c['title']}")
-                
-                if url in processed:
-                    print("  -> Já processado anteriormente")
-                    continue
-                
-                processed.add(url)
-                persist_state()
-                
-                try:
-                    pdf_urls = await extract_pdf_urls(session, url)
-                    print(f"  -> Encontrados {len(pdf_urls)} PDFs")
-                    
-                    chosen_pdf = None
-                    edital_data = None
-                    
-                    for pdf_url in pdf_urls:
-                        result = await search_pdf(session, pdf_url)
-                        if result:
-                            chosen_pdf = pdf_url
-                            edital_data = result
-                            break
-                    
-                    job_title = None
-                    all_jobs = []
-                    
-                    if edital_data and edital_data.get('cargos'):
-                        all_jobs = edital_data['cargos']
-                        job_title = all_jobs[0]
-                    
-                    if not job_title:
-                        print("  -> Ignorado: sem dados relevantes de TI")
-                        continue
-                    
-                    start_date, end_date = parse_date_range(c['date'])
-                    if is_expired(start_date, end_date):
-                        print("  -> Ignorado: concurso expirado")
-                        continue
-                    
-                    entry = {
-                        'title': c['title'], 
-                        'url': url, 
-                        'state': c['state'], 
-                        'job': job_title,
-                        'all_jobs': all_jobs,
-                        'processed_at': datetime.now().isoformat()
-                    }
-                    
-                    if start_date:
-                        entry['start_date'] = start_date
-                    if end_date:
-                        entry['end_date'] = end_date
-                    if chosen_pdf:
-                        entry['pdf_url'] = chosen_pdf
-                    
-                    data_list.append(entry)
-                    persist_state()
+                added = await process_contest(session, c, i, total)
+                if added:
                     new_contests += 1
-                    
-                    print(f"  -> ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
-                    
-                except Exception as e:
-                    print(f"  -> Erro ao processar concurso: {e}")
-                    continue
             print(f"Processamento finalizado! {new_contests} novos concursos adicionados.")
-            
+
         except Exception as e:
             print(f"Erro durante o processamento: {e}")
 

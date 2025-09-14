@@ -147,8 +147,7 @@ CARGOS = [
     'análise e desenvolvimento de sistemas',
 
     # Outras variações
-    'bacharel em sistemas de informação',
-    'bacharel em ciência da computação',
-    'bacharel em engenharia da computação',
-    'bacharel em engenharia de software'
+    'ciência da computação',
+    'engenharia da computação',
+    'engenharia de software'
 ]

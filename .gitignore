@@ -2,3 +2,5 @@
 processed.json
 data.json
 __pycache__/
+logs/
+.vscode/

@@ -63,6 +63,19 @@ def load_data(json_file):
         logger.error(f"Erro ao decodificar JSON do arquivo {json_file}: {e}")
         raise
 
+def determine_status_and_date(item):
+    if "start_date" not in item or item["start_date"] is None:
+        logger.info(f"Concurso identificado como Cancelado: '{item.get('title', 'título não informado')}'")
+        return None, "Cancelado"
+    
+    try:
+        start_date = datetime.strptime(item["start_date"], "%d/%m/%Y").date()
+        status = "Encerrado" if start_date < date.today() else "Aberto"
+        return start_date, status
+    except Exception:
+        logger.warning(f"Data de início inválida para '{item.get('title', 'título não informado')}': {item.get('start_date')} - Marcado como Cancelado")
+        return None, "Cancelado"
+
 def insert_data(conn, data):
     cursor = conn.cursor()
 
@@ -76,7 +89,7 @@ def insert_data(conn, data):
         processed_at = VALUES(processed_at),
         start_date = VALUES(start_date),
         pdf_url = VALUES(pdf_url),
-        status = 'Aberto';
+        status = VALUES(status);
     """
 
     inserted_count = 0
@@ -85,12 +98,7 @@ def insert_data(conn, data):
     for item in data:
         try:
             processed_at = datetime.fromisoformat(item["processed_at"])
-
-            try:
-                start_date = datetime.strptime(item["start_date"], "%d/%m/%Y").date()
-            except Exception:
-                start_date = None
-                logger.warning(f"Data de início inválida para '{item.get('title', 'título não informado')}': {item.get('start_date')}")
+            start_date, status = determine_status_and_date(item)
 
             cursor.execute(sql, (
                 item["title"],
@@ -99,8 +107,8 @@ def insert_data(conn, data):
                 item.get("job"),
                 processed_at,
                 start_date,
-                item["pdf_url"],
-                'Aberto'
+                item.get("pdf_url"),
+                status
             ))
             
             if cursor.rowcount == 1:
@@ -118,16 +126,13 @@ def insert_data(conn, data):
     logger.info(f"Processamento concluído - Inseridos: {inserted_count}, Atualizados: {updated_count}")
 
 def update_expired_concursos(conn):
-    """
-    Atualiza o status dos concursos para 'Encerrado' quando start_date for menor que a data atual
-    """
     cursor = conn.cursor()
     
     sql_update = """
     UPDATE concursos 
     SET status = 'Encerrado'
     WHERE start_date < CURDATE() 
-    AND status != 'Encerrado'
+    AND status NOT IN ('Encerrado', 'Cancelado')
     AND start_date IS NOT NULL
     """
     
@@ -148,9 +153,6 @@ def update_expired_concursos(conn):
     return rows_affected
 
 def analyze_and_update_status(conn):
-    """
-    Função principal para analisar e atualizar status dos concursos
-    """
     logger.info("Iniciando análise de registros para atualização de status")
     
     rows_updated = update_expired_concursos(conn)
@@ -163,15 +165,18 @@ def analyze_and_update_status(conn):
     return rows_updated
 
 def get_status_summary(conn):
-    """
-    Retorna um resumo dos status dos concursos
-    """
     cursor = conn.cursor()
     
     sql = """
-    SELECT status, COUNT(*) as total
+    SELECT 
+        CASE 
+            WHEN status IS NULL THEN 'Sem Status'
+            ELSE status 
+        END as status, 
+        COUNT(*) as total
     FROM concursos 
     GROUP BY status
+    ORDER BY total DESC
     """
     
     try:
@@ -188,11 +193,8 @@ def get_status_summary(conn):
         return []
     finally:
         cursor.close()
-
+        
 def main():
-    """
-    Função principal do programa
-    """
     logger.info("=== INÍCIO DA EXECUÇÃO ===")
     
     try:

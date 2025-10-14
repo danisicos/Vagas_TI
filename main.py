@@ -27,32 +27,6 @@ def normalizar_texto(texto):
     texto = re.sub(r'[^\w\s]', ' ', texto, flags=re.UNICODE)
     texto = re.sub(r'\s+', ' ', texto)
     
-    # Substituições comuns para melhorar o matching
-    substituicoes = {
-        'tecnologia da informacao': 'ti',
-        'tecnologia de informacao': 'ti',
-        'informatica': 'ti',
-        'sistemas': 'sistema',
-        'desenvolvimento de sistemas': 'desenvolvedor',
-        'análise': 'analise',
-        'computação': 'computacao',
-        'técnico': 'tecnico',
-        'especialização': 'especializacao',
-        'administração': 'administracao',
-        'programação': 'programacao',
-        'business intelligence': 'bi',
-        'inteligencia de negocios': 'bi',
-        'machine learning': 'ml',
-        'aprendizado de maquina': 'ml',
-        'dev ops': 'devops',
-        'help desk': 'helpdesk',
-        'segurança  da informação': 'seguranca da informacao',
-        'seguranca da informacao': 'seguranca ti',
-    }
-    
-    for original, substituto in substituicoes.items():
-        texto = texto.replace(original, substituto)
-    
     return texto.strip()
 
 def buscar_cargos(texto_edital):

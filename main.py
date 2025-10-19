@@ -8,8 +8,9 @@ from base import CARGOS
 
 BASE_URL = 'https://www.pciconcursos.com.br'
 HOME_URL = f'{BASE_URL}/concursos/'
-PROCESSED_FILE = 'processed.json'
-DATA_FILE = 'data.json'
+BASE_DIR = '/var/www/vagas'
+DATA_FILE = os.path.join(BASE_DIR, 'data.json')
+PROCESSED_FILE = os.path.join(BASE_DIR, 'processed.json')
 
 processed = set()
 data_list = []

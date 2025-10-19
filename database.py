@@ -4,37 +4,29 @@ from datetime import datetime, date
 from dotenv import load_dotenv
 import os
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
 
 # Carregar variáveis do .env
 load_dotenv()
 
-# Configuração do logging
+# Configuração do logging SIMPLIFICADA
 def setup_logging():
-
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
     logger = logging.getLogger('concursos_db')
     logger.setLevel(logging.INFO)
     
+    # Remove handlers existentes para evitar duplicação
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
     
-    file_handler = RotatingFileHandler(
-        os.path.join(log_dir, 'concursos.log'),
-        maxBytes=5*1024*1024,  # 5MB
-        backupCount=5,
-        encoding='utf-8'
-    )
+    # Handler para stdout (que será capturado pelo cron)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
     
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    file_handler.setFormatter(formatter)
+    # Formato simples
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    stdout_handler.setFormatter(formatter)
     
-    logger.addHandler(file_handler)
+    logger.addHandler(stdout_handler)
     
     return logger
 
@@ -50,7 +42,10 @@ DB_CONFIG = {
 }
 
 # Funções principais
-def load_data(json_file):
+def load_data(json_file=None):
+    if json_file is None:
+        json_file = "/var/www/vagas/data.json"
+    
     try:
         with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -202,7 +197,7 @@ def main():
         conn = mysql.connector.connect(**DB_CONFIG)
         logger.info("Conexão estabelecida com sucesso")
         logger.info("Carregando dados do arquivo JSON...")
-        data = load_data("data.json")
+        data = load_data()
         logger.info("Inserindo/atualizando dados no banco...")
         insert_data(conn, data)
         analyze_and_update_status(conn)

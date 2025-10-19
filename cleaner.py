@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-DATA_FILE = 'data.json'
+DATA_FILE = '/var/www/vagas/data.json'
 
 def str_to_date(date_str: str):
     return datetime.strptime(date_str, "%d/%m/%Y").date()

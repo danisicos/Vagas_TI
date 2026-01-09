@@ -1,7 +1,5 @@
 import os, re, json, asyncio, aiohttp, unicodedata
 from bs4 import BeautifulSoup
-from io import BytesIO
-from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from datetime import datetime
 from base import CARGOS
@@ -107,7 +105,7 @@ def is_expired(start: str, end: str):
     return False
 
 async def fetch(session, url: str) -> bytes:
-    async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+    async with session.get(url, timeout=aiohttp.ClientTimeout(total=45)) as resp:
         resp.raise_for_status()
         return await resp.read()
 
@@ -129,43 +127,6 @@ async def parse_homepage(session) -> list:
         contests.append({'title': title, 'url': url, 'state': state, 'date': date})
     return contests
 
-async def extract_pdf_urls(session, contest_url: str) -> list[str]:
-    html = await fetch(session, contest_url)
-    soup = BeautifulSoup(html, 'html.parser')
-    links = soup.find_all('a', title=re.compile(r'EDITAL DE ABERTURA', re.I))
-    pdf_urls = []
-    for a in links:
-        href = a.get('href')
-        if href:
-            pdf_urls.append(href if href.startswith('http') else BASE_URL + href)
-    if not pdf_urls:
-        for a in soup.find_all('a', href=re.compile(r'\.pdf$', re.I)):
-            href = a['href']
-            pdf_urls.append(href if href.startswith('http') else BASE_URL + href)
-    seen = set()
-    unique = []
-    for u in pdf_urls:
-        if u not in seen:
-            seen.add(u)
-            unique.append(u)
-    return unique
-
-async def search_pdf(session, pdf_url: str) -> dict | None:
-    try:
-        data = await fetch(session, pdf_url)
-        reader = PdfReader(BytesIO(data))
-        raw_text = ''.join(page.extract_text() or '' for page in reader.pages)
-        
-        found_cargos = buscar_cargos(raw_text)
-        
-        print(f"[DEBUG] PDF {pdf_url} -> cargos encontrados: {found_cargos}")
-        
-        if found_cargos:
-            return {"cargos": found_cargos}
-    except Exception as e:
-        print(f"[search_pdf] Erro ao ler PDF {pdf_url}: {e}")
-    return None
-
 async def process_contest(session, c, i, total):
     url = c['url']
     print(f"Processando {i}/{total}: {c['title']}")
@@ -178,68 +139,60 @@ async def process_contest(session, c, i, total):
     persist_state()
 
     try:
-        pdf_urls = await extract_pdf_urls(session, url)
-        print(f"  -> Encontrados {len(pdf_urls)} PDFs")
+        # 1. Baixa o HTML da página do concurso
+        html = await fetch(session, url)
+        soup = BeautifulSoup(html, 'html.parser')
 
-        chosen_pdf, edital_data = await find_first_relevant_pdf(session, pdf_urls)
+        # 2. Extrai todo o texto visível da página
+        # O separator=' ' garante que palavras não grudem (ex: titulo<br>texto)
+        page_text = soup.get_text(separator=' ')
 
-        job_title, all_jobs = extract_job_info(edital_data)
-
-        if not job_title:
-            print("  -> Ignorado: sem dados relevantes de TI")
+        # 3. Busca os cargos diretamente neste texto
+        cargos_encontrados = buscar_cargos(page_text)
+        
+        # Se não achou nada, ignora
+        if not cargos_encontrados:
+            print("  -> Ignorado: sem cargos de TI encontrados na página")
             return False
 
+        # Verifica datas
         start_date, end_date = parse_date_range(c['date'])
         if is_expired(start_date, end_date):
             print("  -> Ignorado: concurso expirado")
             return False
 
-        entry = build_entry(c, job_title, all_jobs, start_date, end_date, chosen_pdf)
+        # Usamos o primeiro cargo encontrado como 'job' principal para exibição
+        job_title = cargos_encontrados[0]
+        
+        entry = {
+            'title': c['title'],
+            'url': c['url'],
+            'state': c['state'],
+            'job': job_title,
+            'all_jobs': cargos_encontrados, # Lista completa
+            'start_date': start_date,
+            'end_date': end_date,
+            'processed_at': datetime.now().isoformat()
+        }
+
         data_list.append(entry)
         persist_state()
 
-        print(f"  -> ADICIONADO: {job_title} (total: {len(all_jobs)} cargos de TI)")
+        print(f"  -> ADICIONADO: {job_title} (total: {len(cargos_encontrados)} cargos)")
         return True
 
     except Exception as e:
         print(f"  -> Erro ao processar concurso: {e}")
         return False
 
-async def find_first_relevant_pdf(session, pdf_urls):
-    for pdf_url in pdf_urls:
-        result = await search_pdf(session, pdf_url)
-        if result:
-            return pdf_url, result
-    return None, None
-
-def extract_job_info(edital_data):
-    if edital_data and edital_data.get('cargos'):
-        all_jobs = edital_data['cargos']
-        job_title = all_jobs[0]
-        return job_title, all_jobs
-    return None, []
-
-def build_entry(c, job_title, all_jobs, start_date, end_date, chosen_pdf):
-    entry = {
-        'title': c['title'],
-        'url': c['url'],
-        'state': c['state'],
-        'job': job_title,
-        'all_jobs': all_jobs,
-        'processed_at': datetime.now().isoformat()
-    }
-    if start_date:
-        entry['start_date'] = start_date
-    if end_date:
-        entry['end_date'] = end_date
-    if chosen_pdf:
-        entry['pdf_url'] = chosen_pdf
-    return entry
-
 async def check_and_process():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iniciando verificação de concursos...")
 
-    async with aiohttp.ClientSession() as session:
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    async with aiohttp.ClientSession(headers=headers) as session:
         try:
             contests = await parse_homepage(session)
             print(f"Encontrados {len(contests)} concursos na página inicial")

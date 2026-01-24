@@ -143,9 +143,16 @@ async def process_contest(session, c, i, total):
         html = await fetch(session, url)
         soup = BeautifulSoup(html, 'html.parser')
 
-        # 2. Extrai todo o texto visível da página
-        # O separator=' ' garante que palavras não grudem (ex: titulo<br>texto)
-        page_text = soup.get_text(separator=' ')
+        # 2. Busca apenas a div com id 'noticia'
+        noticia_div = soup.find('div', id='noticia')
+        
+        # Se não encontrar a div, usa a página inteira como fallback
+        if noticia_div:
+            page_text = noticia_div.get_text(separator=' ')
+            print("  -> Buscando cargos dentro de #noticia")
+        else:
+            page_text = soup.get_text(separator=' ')
+            print("  -> Aviso: #noticia não encontrado, buscando na página inteira")
 
         # 3. Busca os cargos diretamente neste texto
         cargos_encontrados = buscar_cargos(page_text)

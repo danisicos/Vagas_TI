@@ -144,11 +144,11 @@ async def process_contest(session, c, i, total):
         soup = BeautifulSoup(html, 'html.parser')
 
         # 2. Busca apenas a div com id 'noticia'
-        noticia_div = soup.find('div', id='noticia')
+        noticia = soup.find(id='noticia')
         
-        # Se não encontrar a div, usa a página inteira como fallback
-        if noticia_div:
-            page_text = noticia_div.get_text(separator=' ')
+        # Se não encontrar o article, usa a página inteira como fallback
+        if noticia:
+            page_text = noticia.get_text(separator=' ')
             print("  -> Buscando cargos dentro de #noticia")
         else:
             page_text = soup.get_text(separator=' ')

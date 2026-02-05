@@ -136,7 +136,7 @@ CARGOS = [
     'técnico em ti',
     'técnico em t.i.',
     'técnico em telecomunicações',
-    'tecnologia da informação e comunicação',
+    'tecnologia da informação',
     'tecnologia de ti',
     'tecnologia de t.i.',
     'tecnologia em ti',

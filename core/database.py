@@ -44,7 +44,7 @@ DB_CONFIG = {
 # Funções principais
 def load_data(json_file=None):
     if json_file is None:
-        json_file = "/var/www/vagas/data.json"
+        json_file = "/var/www/vagas/data/data.json"
     
     try:
         with open(json_file, "r", encoding="utf-8") as f:

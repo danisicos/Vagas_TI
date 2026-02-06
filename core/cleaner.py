@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-DATA_FILE = '/var/www/vagas/data.json'
+DATA_FILE = '/var/www/vagas/data/data.json'
 
 def str_to_date(date_str: str):
     return datetime.strptime(date_str, "%d/%m/%Y").date()
@@ -47,7 +47,7 @@ def clean_data():
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(cleaned_list, f, ensure_ascii=False, indent=2)
     
-    print(f"\n=== Limpeza Concluída ===")
+    print("\n=== Limpeza Concluída ===")
     print(f"Registros originais: {original_count}")
     print(f"Removidos sem data: {removed_empty}")
     print(f"Removidos expirados: {removed_expired}")

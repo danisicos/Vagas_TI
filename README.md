@@ -2,6 +2,9 @@
 
 Este projeto é um pipeline automatizado para coletar, processar e armazenar informações sobre concursos públicos na área de Tecnologia da Informação (TI). Ele busca dados do site "PCI Concursos", filtra por cargos de interesse, limpa dados expirados e armazena as informações relevantes em um banco de dados MySQL.
 
+# Créditos do script base
+Luis Falci - https://github.com/luisfalci
+
 ## 🚀 Funcionalidades
 
 - **Scraper (`scraper.py`)**: Coleta novos concursos do site PCI Concursos, filtrando especificamente por cargos de TI definidos no sistema.

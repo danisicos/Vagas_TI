@@ -28,6 +28,7 @@ def normalizar_texto(texto):
     
     return texto.strip()
 
+# Função para buscar cargos de TI
 def buscar_cargos(texto_edital):
 
     texto_normalizado = normalizar_texto(texto_edital)
@@ -44,6 +45,7 @@ def buscar_cargos(texto_edital):
     
     return list(dict.fromkeys(cargos_encontrados))
 
+# Verifica se a url já foi visitada
 def load_json_set(path):
     if os.path.exists(path):
         try:
@@ -72,6 +74,9 @@ def save_json_list(lst, path):
 
 def init_state():
     global processed, data_list
+    if not os.path.exists(BASE_DIR):
+        os.makedirs(BASE_DIR, exist_ok=True)
+
     processed = load_json_set(PROCESSED_FILE)
     data_list = load_json_list(DATA_FILE)
     print(f"[init_state] processed={len(processed)}, data_list={len(data_list)}")
@@ -176,7 +181,7 @@ async def process_contest(session, c, i, total):
             'url': c['url'],
             'state': c['state'],
             'job': job_title,
-            'all_jobs': cargos_encontrados, # Lista completa
+            'all_jobs': cargos_encontrados,
             'start_date': start_date,
             'end_date': end_date,
             'processed_at': datetime.now().isoformat()

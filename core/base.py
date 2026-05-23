@@ -4,6 +4,7 @@ CARGOS = [
     'administrador de infraestrutura',
     'administrador de redes',
     'administrador de sistemas',
+    'análise de dados',
     'analista de banco de dados',
     'analista de dados',
     'analista de desenvolvimento de sistemas',
@@ -112,6 +113,8 @@ CARGOS = [
     'programação de computadores',
     'programação de sistemas',
     'programador',
+    'rede de computadores',
+    'redes de computadores',
     'sistemas computacionais',
     'sistema da informação',
     'sistema de informação',
@@ -156,7 +159,6 @@ CARGOS = [
     'tecnólogo de t.i.',
     'tecnólogo em banco de dados',
     'tecnólogo em gestão da tecnologia da informação',
-    'tecnólogo em redes de computadores',
     'tecnólogo em segurança da informação',
     'tecnólogo em sistemas para internet'
 ]

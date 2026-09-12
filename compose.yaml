@@ -1,0 +1,28 @@
+services:
+  vagas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      # Sobrescreve o DB_HOST do .env: dentro da rede concursos_internal o
+      # banco é alcançado pelo alias "db" (nome do serviço no compose do
+      # projeto concursos), não por localhost.
+      DB_HOST: db
+    volumes:
+      # Persiste data.json/processed.json entre execuções, senão o scraper
+      # reprocessaria tudo a cada `docker compose run`.
+      - vagas_data:/var/www/vagas/data
+    networks:
+      - concursos_internal
+
+networks:
+  # Rede criada pelo compose.yaml do projeto concursos (docker network
+  # `concursos_internal`, nome derivado do diretório do projeto). Aqui só
+  # entramos nela pra alcançar o serviço "db" — sem publicar porta nenhuma.
+  concursos_internal:
+    external: true
+
+volumes:
+  vagas_data:

@@ -13,7 +13,7 @@ PREFIXOS = [
 # Conectores mais comuns entre papel e área nos editais
 CONECTORES = ['de', 'em']
 
-# Áreas/domínios de TI - também usados sozinhos, sem papel na frente
+# Áreas/domínios de TI - também usados sozinhos, sem papel na frente.
 AREAS_TI = [
     'informática', 'tecnologia', 'tecnologia da informação', 'ti', 't.i.',
     'sistemas', 'sistemas de informação', 'sistemas computacionais',
@@ -24,16 +24,11 @@ AREAS_TI = [
     'telecomunicações', 'hardware', 'software', 'computação',
     'ciência da computação', 'ciências da computação', 'forense digital',
     'computação forense', 'governança de ti', 'computador', 'computadores',
-    'suporte', 'testes', 'help desk', 'soluções', 'aplicações', 'programas',
-    'automação', 'desenvolvimento',
+    'suporte', 'testes', 'help desk', 'soluções', 'aplicações',
+    'automação', 'desenvolvimento de software', 'desenvolvimento de sistemas',
 ]
 
-# Áreas seguras para aparecerem sozinhas (sem papel na frente) na busca por
-# substring. Só entram aqui termos longos/multi-palavra: termos curtos como
-# 'ti', 'ia', 'gis' ou 'dados' soltos combinam com pedaços de palavras
-# aleatórias (ex.: 'ti' dentro de "matemática", 'gis' dentro de "legislativo")
-# e geram falso positivo. Esses termos curtos só são usados dentro das
-# combinações abaixo, onde vêm ancorados por um conector ("de ti", "em gis").
+# Áreas seguras para aparecerem sozinhas 
 AREAS_BARE = [
     'tecnologia da informação', 'sistemas de informação', 'sistema de informação',
     'sistemas da informação', 'sistema da informação', 'sistemas computacionais',
@@ -49,6 +44,7 @@ AREAS_BARE = [
 EXTRAS = [
     'programador',
     'digitalizador',
+    'desenvolvedor de programas',
     'analista forense digital',
     'analista de desenvolvimento de sistemas',
     'análise e desenvolvimento de sistemas',

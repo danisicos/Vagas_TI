@@ -1,0 +1,14 @@
+# Apenas otimização do build context.
+# A segurança real está no COPY explícito do Dockerfile (o .env nunca é copiado).
+
+.env
+.env.*
+.git
+.gitignore
+.vscode/
+venv/
+__pycache__/
+*.md
+data.json
+processed.json
+logs/

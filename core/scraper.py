@@ -31,16 +31,18 @@ def normalizar_texto(texto):
 # Função para buscar cargos de TI
 def buscar_cargos(texto_edital):
 
-    texto_normalizado = normalizar_texto(texto_edital)
+    # Espaços nas pontas garantem que o match respeite fim de palavra dos dois
+    # lados (sem isso, "analise de ti" bate dentro de "analise de titulos")
+    texto_normalizado = f' {normalizar_texto(texto_edital)} '
     cargos_encontrados = []
-    
+
     if not hasattr(buscar_cargos, 'cargos_normalizados'):
         buscar_cargos.cargos_normalizados = {
             cargo: normalizar_texto(cargo) for cargo in CARGOS
         }
-    
+
     for cargo_original, cargo_normalizado in buscar_cargos.cargos_normalizados.items():
-        if cargo_normalizado in texto_normalizado:
+        if f' {cargo_normalizado} ' in texto_normalizado:
             cargos_encontrados.append(cargo_original)
     
     return list(dict.fromkeys(cargos_encontrados))
